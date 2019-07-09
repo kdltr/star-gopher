@@ -1,0 +1,29 @@
+# Liste des horaires en temps réel
+
+Inputs:
+
+- id ligne
+- id arrêt
+- sens
+
+Outputs:
+
+Liste des horaires temps-réel et théoriques
+
+https://data.explore.star.fr/api/records/1.0/search/?dataset=tco-bus-circulation-passages-tr&sort=precision&facet=idligne&facet=nomcourtligne&facet=sens&facet=destination&facet=precision&refine.idligne=0005&refine.sens=0&refine.idarret=1259
+
+# Recherche par ligne, arrêt, direction
+
+Liste des lignes
+
+Liste des lignes
+https://data.explore.star.fr/explore/dataset/tco-bus-topologie-lignes-td/table/?sort=id
+
+ID Ligne -> liste de [parcours + sens]
+https://data.explore.star.fr/explore/dataset/tco-bus-topologie-parcours-td/api/?disjunctive.nomcourtligne&sort=idligne&refine.idligne=0005
+
+ID Parcours -> liste des arrêts
+https://data.explore.star.fr/explore/dataset/tco-bus-topologie-dessertes-td/api/?sort=-ordre&refine.idparcours=0005-A-1252-1269
+
+
+# Infos trafic
