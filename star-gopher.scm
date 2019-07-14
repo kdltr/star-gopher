@@ -1,5 +1,7 @@
 (import
   (chicken format)
+  (chicken io)
+  (chicken process)
   (chicken process-context)
   (chicken string)
   (chicken time posix)
@@ -12,7 +14,12 @@
   medea
   phricken)
 
-(client-software (cons '("Star Gopher" "0.1" #f) (client-software)))
+(define *version*
+  (call-with-input-pipe
+    "git describe --always --tags --dirty"
+    read-line))
+
+(client-software (cons (list "Star Gopher" *version* #f) (client-software)))
 
 (define *api-key*
   (get-environment-variable "STAR_GOPHER_API_KEY"))
@@ -118,14 +125,27 @@
 
 (define (root-handler req)
   (send-entries
-    `((i "Star Gopher")
-      (i "v0.1")
-      (i)
+    `((0 "À propos de ce service" "/about")
       (0 "C5 Lycée Brequigny @ Rochester" "/1259/5/0")
       (0 "C5 Lycée Brequigny @ Sainte Anne" "/1014/5/0")
       (0 "C5 Patton @ Sainte Anne" "/1026/5/1")
       (0 "C5 Patton @ Pressoir" "/2257/5/1")
       )))
+
+(define (about-handler req)
+  (for-each
+    send-line
+    `("Star Gopher"
+      "-----------"
+      ""
+      "Service d’horaires en temps réel de la ville de Rennes, servi sur"
+      "le réseau Gopher."
+      ""
+      "Écrit par Kooda <kooda@upyum.com>"
+      ""
+      ,(conc "Version: " *version*)
+      "Sources: git://upyum.com/star-gopher"))
+  (send-lastline))
 
 (define (realtime-traffic-handler req)
   (define (sanitize-input stop-id line-id direction)
@@ -137,6 +157,7 @@
 
 (handlers (list (match-selector "" root-handler)
                 (match-selector "/" root-handler)
+                (match-selector "/about" about-handler)
                 (match-selector
                   '(: "/" ($ (+ num)) "/" ($ (+ num)) "/" ($ (+ num)))
                   realtime-traffic-handler)))
