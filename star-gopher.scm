@@ -64,11 +64,12 @@
 ;; API Dates are represented as strings of this format: yyyy-mm-ddTHH:MM:SS+ZZ:ZZ"
 
 (define (api-date->time str)
-  (string->time str "%Y-%m-%dT%H:%M:%S"))
+  (string->time (string-translate str ":")
+                "%Y-%m-%dT%H%M%S%z"))
 
 (define (time- d1 d2)
-  (- (local-time->seconds d1)
-     (local-time->seconds d2)))
+  (- (utc-time->seconds d1)
+     (utc-time->seconds d2)))
 
 ;; Duration in seconds -> duration in hours, minutes, seconds
 (define (seconds->duration secs)
@@ -77,8 +78,8 @@
     (list hours minutes)))
 
 (define (duration->string dur)
-  (if (zero? (car dur))
-      (if (zero? (cadr dur))
+  (if (<= (car dur) 0)
+      (if (<= (cadr dur) 0)
           "<1 min"
           (sprintf "~A min" (cadr dur)))
       (sprintf "~A hr ~A min" (car dur) (cadr dur))))
@@ -90,7 +91,8 @@
   (let* ((uri (realtime-traffic-uri line-id direction stop-id))
          (json (with-input-from-request uri #f read-json))
          (records (vector->list (alist-ref 'records json)))
-         (first-fields (alist-ref 'fields (car records))))
+         (first-fields (alist-ref 'fields (car records)))
+         (now-time (seconds->local-time)))
     (cons*
       (sprintf "Ligne ~A direction ~A"
                (alist-ref 'nomcourtligne first-fields)
@@ -101,14 +103,16 @@
                (time->string (api-date->time
                                (alist-ref 'record_timestamp (car records)))
                              "%d/%m/%Y %H:%M:%S"))
+      (sprintf "Date sur le serveur: ~A"
+               (time->string now-time "%d/%m/%Y %H:%M:%S"))
+      "* : horaire théorique"
       ""
-      (format-realtime-traffic-data records))))
+      (format-realtime-traffic-data now-time records))))
 
-(define (format-realtime-traffic-data records)
+(define (format-realtime-traffic-data now-time records)
   (define (fmt-record record-fields record-timestamp)
     (let* ((departure-time (api-date->time (alist-ref 'depart record-fields)))
-           (record-time (api-date->time record-timestamp))
-           (diff (time- departure-time record-time))
+           (diff (time- departure-time now-time))
            (duration (seconds->duration diff)))
     (sprintf "~a ~a (~a)"
              (if (string=? (alist-ref 'precision record-fields)
