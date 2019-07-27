@@ -211,7 +211,7 @@
 
 (define epoch (time->seconds (current-time)))
 
-(define (dataset-updater #!optional (n 0))
+(define (dataset-updater #!optional (n 1))
   (thread-sleep! (+ epoch (* n 6 60 60)))
   (update-all-datasets!)
   (dataset-updater (add1 n)))
