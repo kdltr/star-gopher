@@ -64,7 +64,7 @@
 ;; API Dates are represented as strings of this format: yyyy-mm-ddTHH:MM:SS+ZZ:ZZ"
 
 (define (api-date->time str)
-  (string->time str "%Y-%m-%dT%H:%M:%S%z"))
+  (string->time str "%Y-%m-%dT%H:%M:%S"))
 
 (define (time- d1 d2)
   (- (local-time->seconds d1)
@@ -130,10 +130,6 @@
     `((0 "À propos de ce service" "/about")
       (1 "Liste des lignes" "/lines")
       (7 "Recherche par arrêt" "/search/stop")
-      (0 "C5 Lycée Brequigny @ Rochester" "/1259/5/0")
-      (0 "C5 Lycée Brequigny @ Sainte Anne" "/1014/5/0")
-      (0 "C5 Patton @ Sainte Anne" "/1026/5/1")
-      (0 "C5 Patton @ Pressoir" "/2257/5/1")
       )))
 
 (define (about-handler req)
@@ -204,7 +200,8 @@
 
 
 (define (start-star-gopher!)
-  (update-all-datasets!)
+  (when (null? (list-lines))
+    (update-all-datasets!))
   (thread-start! (make-thread dataset-updater))
   ((logger) 'info #f "Starting server")
   (start-server!))
