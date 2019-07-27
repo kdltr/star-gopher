@@ -204,18 +204,24 @@
 
 
 (define (start-star-gopher!)
+  (update-all-datasets!)
   (thread-start! (make-thread dataset-updater))
+  ((logger) 'info #f "Starting server")
   (start-server!))
 
 (define epoch (time->seconds (current-time)))
 
 (define (dataset-updater #!optional (n 0))
+  (thread-sleep! (+ epoch (* n 6 60 60)))
+  (update-all-datasets!)
+  (dataset-updater (add1 n)))
+
+(define (update-all-datasets!)
   ((logger) 'info #f "Updating datasets")
   (update-lines-table!)
   (update-stops-table!)
   (update-routes-table!)
-  (thread-sleep! (+ epoch (* n 60)))
-  (dataset-updater (add1 n)))
+  ((logger) 'info #f "Finished updating datasets"))
 
 (cond-expand
       ((or chicken-script compiling) (start-star-gopher!))
