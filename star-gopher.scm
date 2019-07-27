@@ -7,6 +7,7 @@
   (chicken time posix)
   (srfi 1)
   (srfi 13)
+  (srfi 18)
   (srfi 71)
   http-client
   openssl
@@ -200,6 +201,22 @@
 
 (port 7071)
 (sgm-port 70)
+
+
+(define (start-star-gopher!)
+  (thread-start! (make-thread dataset-updater))
+  (start-server!))
+
+(define epoch (time->seconds (current-time)))
+
+(define (dataset-updater #!optional (n 0))
+  ((logger) 'info #f "Updating datasets")
+  (update-lines-table!)
+  (update-stops-table!)
+  (update-routes-table!)
+  (thread-sleep! (+ epoch (* n 60)))
+  (dataset-updater (add1 n)))
+
 (cond-expand
-      ((or chicken-script compiling) (start-server!))
+      ((or chicken-script compiling) (start-star-gopher!))
       (else))

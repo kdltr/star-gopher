@@ -21,7 +21,7 @@
 (define *db-file* "star.sqlite")
 
 (define-values
-  (update-lines-table! update-routes-table! update-routes-table!)
+  (update-lines-table! update-stops-table! update-routes-table!)
   (let ((make-table-updater
           (lambda (number-of-columns dataset-name table-name)
             (let ((uri (download-dataset-uri dataset-name))
