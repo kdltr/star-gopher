@@ -12,7 +12,9 @@
   openssl
   uri-common
   medea
-  phricken)
+  phricken
+  sql-de-lite)
+
 
 (define *version*
   (call-with-input-pipe
@@ -27,6 +29,8 @@
 
 (define (current-timezone)
   (time->string (seconds->local-time) "%z"))
+
+(include "database.scm")
 
 ;; URLs
 
@@ -59,7 +63,7 @@
 ;; API Dates are represented as strings of this format: yyyy-mm-ddTHH:MM:SS+ZZ:ZZ"
 
 (define (api-date->time str)
-  (string->time str "%Y-%m-%dT%H:%M:%S+"))
+  (string->time str "%Y-%m-%dT%H:%M:%S%z"))
 
 (define (time- d1 d2)
   (- (local-time->seconds d1)
@@ -81,12 +85,9 @@
 
 ;; Actual work
 
-(define (fetch uri)
-  (with-input-from-request uri #f read-json))
-
 (define (realtime-traffic-for line-id direction stop-id)
   (let* ((uri (realtime-traffic-uri line-id direction stop-id))
-         (json (fetch uri))
+         (json (with-input-from-request uri #f read-json))
          (records (vector->list (alist-ref 'records json)))
          (first-fields (alist-ref 'fields (car records))))
     (cons*
@@ -126,6 +127,8 @@
 (define (root-handler req)
   (send-entries
     `((0 "À propos de ce service" "/about")
+      (1 "Liste des lignes" "/lines")
+      (7 "Recherche par arrêt" "/search/stop")
       (0 "C5 Lycée Brequigny @ Rochester" "/1259/5/0")
       (0 "C5 Lycée Brequigny @ Sainte Anne" "/1014/5/0")
       (0 "C5 Patton @ Sainte Anne" "/1026/5/1")
@@ -155,9 +158,42 @@
     (send-lastline)
     #t))
 
+(define (lines-handler req)
+  (define (line-link id name description)
+    (make-entry 1
+                (sprintf "~A: ~A" name description)
+                (sprintf "/line/~A" id)))
+  (for-each (lambda (l) (send-entry (apply line-link l))) (list-lines))
+  (send-lastline)
+  #t)
+
+(define (line-handler req)
+  (send-line "Not implemented yet")
+  (send-lastline)
+  #t)
+
+(define (search-stop-handler req)
+  (define (line-link stop-name line-name destination-name stop-id line-id direction)
+    (make-entry 0
+                (sprintf "Arrêt ~A: ligne ~A direction ~A"
+                         stop-name line-name destination-name)
+                (sprintf "/~A/~A/~A"
+                         stop-id line-id direction)))
+  (let* ((search-string (car (request-extra req)))
+         (search-results (search-stops search-string)))
+    (for-each
+      (lambda (result)
+        (send-entry (apply line-link result)))
+      search-results)
+    (send-lastline)))
+
 (handlers (list (match-selector "" root-handler)
                 (match-selector "/" root-handler)
                 (match-selector "/about" about-handler)
+                (match-selector "/lines" lines-handler)
+                (match-selector '(: "/line/" ($ (+ num)))
+                  line-handler)
+                (match-selector "/search/stop" search-stop-handler)
                 (match-selector
                   '(: "/" ($ (+ num)) "/" ($ (+ num)) "/" ($ (+ num)))
                   realtime-traffic-handler)))
