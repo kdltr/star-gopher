@@ -65,7 +65,7 @@
 
 (define (api-date->time str)
   (string->time (string-translate str ":")
-                "%Y-%m-%dT%H%M%S%z"))
+                "%Y-%m-%dT%H%M%S"))
 
 (define (time- d1 d2)
   (- (utc-time->seconds d1)
