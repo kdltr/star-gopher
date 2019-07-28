@@ -60,6 +60,7 @@
     (lambda (db)
       (query fetch-rows (sql db "SELECT id, nomcourt, nomlong FROM lignes ORDER BY id;")))))
 
+;; TODO filtrer les arrêts terminus
 (define lines-at-stop-query-code
 #<<END
 SELECT
@@ -71,6 +72,7 @@ parcours.idligne,
 parcours.sens
 FROM dessertes INNER JOIN parcours ON dessertes.idparcours = parcours.id
 WHERE dessertes.nomarret LIKE ?
+GROUP BY dessertes.idarret, parcours.idligne, parcours.sens
 ORDER BY dessertes.idligne
 END
 )
