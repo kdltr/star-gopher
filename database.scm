@@ -129,5 +129,5 @@ END
   (call-with-database *db-file*
     (lambda (db)
       (query fetch-rows
-             (sql db lines-at-stop-query-code)
+             (sql db search-stops-query-code)
              (string-append "%" str "%")))))
