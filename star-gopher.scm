@@ -163,13 +163,38 @@
   (define (line-link id name description)
     (make-entry 1
                 (sprintf "~A: ~A" name description)
-                (sprintf "/line/~A" id)))
+                (sprintf "/routes/~A" id)))
   (for-each (lambda (l) (send-entry (apply line-link l))) (list-lines))
   (send-lastline)
   #t)
 
-(define (line-handler req)
-  (send-line "Not implemented yet")
+(define (routes-handler req)
+  (define (line-link short-name description route-id)
+    (make-entry 1
+                (sprintf "Ligne ~A : ~A" short-name description)
+                (sprintf "/stops/~A" route-id)))
+  (let ((line-id (car (request-matches req))))
+    (for-each
+      (lambda (l)
+        (send-entry (apply line-link l)))
+      (list-routes-for-line line-id)))
+  (send-lastline)
+  #t)
+
+(define (stops-handler req)
+  (define (line-link name stop-id line-id direction)
+    (make-entry 1
+                name
+                (sprintf "/~A/~A/~A" stop-id line-id direction)))
+  (let* ((route-id (car (request-matches req)))
+         (route-infos (route-informations route-id))
+         (line-and-dir (cddr route-infos)))
+    (send-entry
+      (make-info-entry "Ligne " (first route-infos) " : " (second route-infos)))
+    (for-each
+      (lambda (l)
+        (send-entry (apply line-link (append l line-and-dir))))
+      (list-stops-for-route route-id)))
   (send-lastline)
   #t)
 
@@ -192,8 +217,10 @@
                 (match-selector "/" root-handler)
                 (match-selector "/about" about-handler)
                 (match-selector "/lines" lines-handler)
-                (match-selector '(: "/line/" ($ (+ num)))
-                  line-handler)
+                (match-selector '(: "/routes/" ($ (+ num)))
+                  routes-handler)
+                (match-selector '(: "/stops/" ($ (+ any)))
+                  stops-handler)
                 (match-selector "/search/stop" search-stop-handler)
                 (match-selector
                   '(: "/" ($ (+ num)) "/" ($ (+ num)) "/" ($ (+ num)))

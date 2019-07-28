@@ -58,10 +58,58 @@
 (define (list-lines)
   (call-with-database *db-file*
     (lambda (db)
-      (query fetch-rows (sql db "SELECT id, nomcourt, nomlong FROM lignes ORDER BY id;")))))
+      (query fetch-rows 
+             (sql db "SELECT id, nomcourt, nomlong FROM lignes ORDER BY id;")))))
+
+(define list-routes-for-line-query-code
+#<<END
+SELECT nomcourtligne, libellelong, id
+FROM parcours
+WHERE idligne = ?
+ORDER BY sens
+END
+)
+
+(define (list-routes-for-line line)
+  (call-with-database *db-file*
+    (lambda (db)
+      (query fetch-rows
+             (sql db list-routes-for-line-query-code)
+             line))))
+
+(define list-stops-for-route-query-code
+#<<END
+SELECT nomarret, idarret
+FROM dessertes
+WHERE idparcours = ?
+ORDER BY ordre;
+END
+)
+
+(define (list-stops-for-route route)
+  (call-with-database *db-file*
+    (lambda (db)
+      (query fetch-rows
+             (sql db list-stops-for-route-query-code)
+             route))))
+
+(define route-informations-query-code
+#<<END
+SELECT nomcourtligne, libellelong, idligne, sens
+FROM parcours
+WHERE id = ?
+END
+)
+
+(define (route-informations route)
+  (call-with-database *db-file*
+    (lambda (db)
+      (query fetch-row
+             (sql db route-informations-query-code)
+             route))))
 
 ;; TODO filtrer les arrêts terminus
-(define lines-at-stop-query-code
+(define search-stops-query-code
 #<<END
 SELECT
 dessertes.nomarret,
