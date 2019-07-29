@@ -33,30 +33,6 @@
 
 (include "database.scm")
 
-;; URLs
-
-(define *api-base-uri*
-  (uri-reference "https://data.explore.star.fr/api/records/1.0/search/"))
-
-(define (realtime-traffic-uri line-id direction stop-id)
-  (assert (= (string-length line-id) 4))
-  (assert (member direction '("0" "1")))
-  (update-uri *api-base-uri*
-              query: `((dataset . tco-bus-circulation-passages-tr)
-                       (sort . -depart)
-                       (facet . idligne)
-                       (facet . nomcourtligne)
-                       (facet . sens)
-                       (facet . destination)
-                       (facet . precision)
-                       (facet . nomarret)
-                       (apikey . ,*api-key*)
-                       (timezone . ,(current-timezone))
-                       (refine.idligne . ,line-id)
-                       (refine.sens . ,direction)
-                       (refine.idarret . ,stop-id))))
-
-
 ;; Date and duration madness
 
 ;; Help, we need a good time & duration API
@@ -85,46 +61,6 @@
       (sprintf "~A hr ~A min" (car dur) (cadr dur))))
 
 
-;; Actual work
-
-(define (realtime-traffic-for line-id direction stop-id)
-  (let* ((uri (realtime-traffic-uri line-id direction stop-id))
-         (json (with-input-from-request uri #f read-json))
-         (records (vector->list (alist-ref 'records json)))
-         (first-fields (alist-ref 'fields (car records)))
-         (now-time (seconds->local-time)))
-    (cons*
-      (sprintf "Ligne ~A direction ~A"
-               (alist-ref 'nomcourtligne first-fields)
-               (alist-ref 'destination first-fields))
-      (sprintf "Arrêt: ~A"
-               (alist-ref 'nomarret first-fields))
-      (sprintf "Données datant du ~A"
-               (time->string (api-date->time
-                               (alist-ref 'record_timestamp (car records)))
-                             "%d/%m/%Y %H:%M:%S"))
-      (sprintf "Date sur le serveur: ~A"
-               (time->string now-time "%d/%m/%Y %H:%M:%S"))
-      "* : horaire théorique"
-      ""
-      (format-realtime-traffic-data now-time records))))
-
-(define (format-realtime-traffic-data now-time records)
-  (define (fmt-record record-fields record-timestamp)
-    (let* ((departure-time (api-date->time (alist-ref 'depart record-fields)))
-           (diff (time- departure-time now-time))
-           (duration (seconds->duration diff)))
-    (sprintf "~a ~a (~a)"
-             (if (string=? (alist-ref 'precision record-fields)
-                           "Temps réel")
-                 #\space
-                 #\*)
-             (duration->string duration)
-             (time->string (api-date->time (alist-ref 'departtheorique record-fields))
-                           "%H:%M:%S"))))
-  (map (lambda (r) (fmt-record (alist-ref 'fields r)
-                               (alist-ref 'record_timestamp r)))
-    records))
 
 
 ;; Gopher frontend
@@ -152,12 +88,35 @@
   (send-lastline))
 
 (define (realtime-traffic-handler req)
-  (define (sanitize-input stop-id line-id direction)
-    (list (string-pad line-id 4 #\0) direction stop-id))
-  (let ((args (apply sanitize-input (request-matches req))))
-    (for-each send-line (apply realtime-traffic-for args))
+  (let* ((triplet (request-matches req))
+         (now-time (seconds->local-time))
+         (line-name line-direction stop-name
+           (apply values (apply triplet-informations triplet))))
+    (for-each
+      send-line
+      (list (sprintf "Ligne ~A direction ~A"
+                     line-name line-direction)
+            (sprintf "Arrêt: ~A"
+                     stop-name)
+            (sprintf "Date sur le serveur: ~A"
+                     (time->string now-time "%d/%m/%Y %H:%M:%S"))
+            "* : horaire théorique"
+            ""))
+    (for-each send-line (traffic-line now-time triplet))
     (send-lastline)
     #t))
+
+(define (traffic-line now-time triplet)
+  (map
+    (lambda (l)
+      (let* ((date precision (apply values l))
+             (diff (time- (api-date->time date) now-time))
+             (duration (seconds->duration diff)))
+        (sprintf "~a ~a (~a)"
+                 (if (string=? precision "Temps réel") #\space #\*)
+                 (duration->string duration)
+                 (time->string (api-date->time date) "%H:%M:%S"))))
+    (apply realtime-traffic triplet)))
 
 (define (lines-handler req)
   (define (line-link id name description)

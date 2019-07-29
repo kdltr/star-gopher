@@ -108,6 +108,37 @@ END
              (sql db route-informations-query-code)
              route))))
 
+(define realtime-traffic-query-code
+#<<END
+SELECT depart, precision
+FROM passages
+WHERE idarret = ? AND idligne = ? AND sens = ?
+ORDER BY depart
+END
+)
+
+(define (realtime-traffic stop-id line-id direction)
+  (call-with-database *db-file*
+    (lambda (db)
+      (query fetch-rows
+             (sql db realtime-traffic-query-code)
+             stop-id line-id direction))))
+
+(define triplet-informations-query-code
+#<<END
+SELECT parcours.nomcourtligne, parcours.nomarretarrivee, dessertes.nomarret
+FROM parcours INNER JOIN dessertes ON parcours.id = dessertes.idparcours
+WHERE dessertes.idarret = ? AND parcours.idligne = ? AND parcours.sens = ?
+END
+)
+  
+(define (triplet-informations stop-id line-id direction)
+  (call-with-database *db-file*
+    (lambda (db)
+      (query fetch-row
+             (sql db triplet-informations-query-code)
+             stop-id line-id direction))))
+
 ;; TODO filtrer les arrêts terminus
 (define search-stops-query-code
 #<<END

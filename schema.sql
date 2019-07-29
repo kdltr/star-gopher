@@ -39,3 +39,20 @@ CREATE TABLE parcours(
   "couleurtrace" TEXT,
   "geo_point_2d" TEXT
 );
+CREATE TABLE passages(
+  "idligne" TEXT,
+  "nomcourtligne" TEXT,
+  "sens" TEXT,
+  "destination" TEXT,
+  "idarret" TEXT,
+  "nomarret" TEXT,
+  "coordonnees" TEXT,
+  "arriveetheorique" TEXT,
+  "departtheorique" TEXT,
+  "arrivee" TEXT,
+  "depart" TEXT,
+  "idcourse" TEXT,
+  "idbus" TEXT,
+  "numerobus" TEXT,
+  "precision" TEXT
+);
