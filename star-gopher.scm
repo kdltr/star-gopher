@@ -142,7 +142,7 @@
 
 (define (stops-handler req)
   (define (line-link name stop-id line-id direction)
-    (make-entry 1
+    (make-entry 0
                 name
                 (sprintf "/~A/~A/~A" stop-id line-id direction)))
   (let* ((route-id (car (request-matches req)))
