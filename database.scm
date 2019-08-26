@@ -1,3 +1,9 @@
+(define (call-with-database* db-file proc)
+  (call-with-database db-file
+    (lambda (db)
+      (set-busy-handler! db (busy-timeout 10000))
+      (proc db))))
+
 (define (read-csv input-port)
   (read-list input-port
              (lambda (p)
@@ -35,7 +41,7 @@
                         ","))))
               (lambda ()
                 (let ((data (call-with-input-request uri #f read-csv)))
-                  (call-with-database
+                  (call-with-database*
                     *db-file*
                     (lambda (db)
                       (let ((delete-statement (sql db delete-statement-code))
@@ -56,7 +62,7 @@
 ;; QUERIES
 
 (define (list-lines)
-  (call-with-database *db-file*
+  (call-with-database* *db-file*
     (lambda (db)
       (query fetch-rows 
              (sql db "SELECT id, nomcourt, nomlong FROM lignes ORDER BY id;")))))
@@ -71,7 +77,7 @@ END
 )
 
 (define (list-routes-for-line line)
-  (call-with-database *db-file*
+  (call-with-database* *db-file*
     (lambda (db)
       (query fetch-rows
              (sql db list-routes-for-line-query-code)
@@ -87,7 +93,7 @@ END
 )
 
 (define (list-stops-for-route route)
-  (call-with-database *db-file*
+  (call-with-database* *db-file*
     (lambda (db)
       (query fetch-rows
              (sql db list-stops-for-route-query-code)
@@ -102,7 +108,7 @@ END
 )
 
 (define (route-informations route)
-  (call-with-database *db-file*
+  (call-with-database* *db-file*
     (lambda (db)
       (query fetch-row
              (sql db route-informations-query-code)
@@ -118,7 +124,7 @@ END
 )
 
 (define (realtime-traffic stop-id line-id direction)
-  (call-with-database *db-file*
+  (call-with-database* *db-file*
     (lambda (db)
       (query fetch-rows
              (sql db realtime-traffic-query-code)
@@ -133,7 +139,7 @@ END
 )
   
 (define (triplet-informations stop-id line-id direction)
-  (call-with-database *db-file*
+  (call-with-database* *db-file*
     (lambda (db)
       (query fetch-row
              (sql db triplet-informations-query-code)
@@ -157,7 +163,7 @@ END
 )
 
 (define (search-stops str)
-  (call-with-database *db-file*
+  (call-with-database* *db-file*
     (lambda (db)
       (query fetch-rows
              (sql db search-stops-query-code)
